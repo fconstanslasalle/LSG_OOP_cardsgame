@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTG Java Edition - Generador de Cartes</title>
+    <!-- Tailwind CSS per al disseny modern -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Icones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono&display=swap');
+
+        :root {
+            --card-width: 6.3cm;
+            --card-height: 8.8cm;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Estils de les cartes Magic */
+        .mtg-card {
+            width: 256px;
+            height: 360px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            cursor: default;
+        }
+
+        .mtg-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            z-index: 10;
+        }
+
+        /* Classes de colors segons tipus */
+        .card-class { border-color: #5b21b6; background-color: #0f172a; color: #f5f3ff; }
+        .card-constructor { border-color: #065f46; background-color: #0f172a; color: #ecfdf5; }
+        .card-method { border-color: #9a3412; background-color: #0f172a; color: #fff7ed; }
+
+        .header-class { background-color: rgba(76, 29, 149, 0.5); }
+        .header-constructor { background-color: rgba(6, 78, 59, 0.5); }
+        .header-method { background-color: rgba(154, 52, 18, 0.5); }
+
+        /* Configuració d'impressió */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; margin: 0 !important; }
+            
+            #cardGrid {
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 5px !important;
+                padding: 0 !important;
+            }
+
+            .mtg-card {
+                width: var(--card-width) !important;
+                height: var(--card-height) !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border-width: 4px !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            @page {
+                size: A4;
+                margin: 0.5cm;
+            }
+        }
+
+        /* Animacions per al modal */
+        .modal-enter { animation: fadeIn 0.2s ease-out; }
+        .modal-content-enter { animation: zoomIn 0.2s ease-out; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Diàleg de Confirmació (Modal) -->
+    <div id="deleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm modal-enter">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden modal-content-enter">
+            <div class="p-8 text-center">
+                <div class="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-4">
+                    <i data-lucide="alert-triangle"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-slate-800 mb-2">Esborrar dades?</h3>
+                <p class="text-slate-600 mb-8">Estàs segur que vols eliminar totes les cartes carregades? Aquesta acció no es pot desfer.</p>
+                <div class="flex gap-3">
+                    <button onclick="closeModal()" class="flex-1 px-4 py-3 rounded-2xl text-slate-600 font-bold hover:bg-slate-100 transition">
+                        Cancel·lar
+                    </button>
+                    <button onclick="confirmClear()" class="flex-1 px-4 py-3 rounded-2xl bg-red-600 text-white font-bold hover:bg-red-700 transition shadow-lg shadow-red-200">
+                        Sí, esborrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header i Controls -->
+    <div class="max-w-6xl mx-auto mb-10 no-print">
+        <header class="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-200">
+                            <i data-lucide="file-spreadsheet" class="text-white"></i>
+                        </div>
+                        <h1 class="text-3xl font-black text-slate-800 tracking-tighter">
+                            MTG <span class="text-emerald-600">JAVA EDITION</span>
+                        </h1>
+                    </div>
+                    <p class="text-slate-500 font-medium ml-1">Carrega els teus CSVs i genera el teu deck imprimible</p>
+                </div>
+
+                <div class="flex flex-wrap gap-4">
+                    <label class="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-bold cursor-pointer transition-all shadow-xl shadow-emerald-100 active:scale-95">
+                        <i data-lucide="upload" size="20"></i> Pujar Fitxer
+                        <input type="file" id="csvInput" accept=".csv" class="hidden">
+                    </label>
+                    
+                    <button id="printBtn" onclick="handlePrint()" disabled class="flex items-center gap-2 bg-slate-800 hover:bg-black text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-xl disabled:opacity-20 disabled:cursor-not-allowed active:scale-95">
+                        <i data-lucide="printer" size="20"></i> Generar PDF
+                    </button>
+
+                    <button id="clearBtn" onclick="openModal()" disabled class="p-3 text-red-500 hover:bg-red-50 rounded-2xl transition-all border border-transparent hover:border-red-100 disabled:opacity-20" title="Esborrar tot">
+                        <i data-lucide="trash-2" size="24"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtres -->
+            <div id="filterSection" class="hidden flex flex-wrap items-center gap-3 mt-10 pt-8 border-t border-slate-100">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2">Filtre de vista:</span>
+                <button onclick="setFilter('all')" class="filter-btn px-5 py-2 rounded-full text-xs font-bold transition-all bg-slate-800 text-white shadow-md" data-filter="all">Totes</button>
+                <button onclick="setFilter('class')" class="filter-btn px-5 py-2 rounded-full text-xs font-bold transition-all bg-slate-100 text-slate-500 hover:bg-slate-200" data-filter="class">Classes</button>
+                <button onclick="setFilter('constructor')" class="filter-btn px-5 py-2 rounded-full text-xs font-bold transition-all bg-slate-100 text-slate-500 hover:bg-slate-200" data-filter="constructor">Constructors</button>
+                <button onclick="setFilter('method')" class="filter-btn px-5 py-2 rounded-full text-xs font-bold transition-all bg-slate-100 text-slate-500 hover:bg-slate-200" data-filter="method">Mètodes</button>
+                
+                <div class="ml-auto bg-slate-50 px-4 py-2 rounded-full border border-slate-100 text-xs font-bold text-slate-500">
+                    <span id="counter">0</span> CARTES DISPONIBLES
+                </div>
+            </div>
+        </header>
+    </div>
+
+    <!-- Àrea de Cartes -->
+    <div class="max-w-6xl mx-auto">
+        <!-- Estat buit -->
+        <div id="emptyState" class="flex flex-col items-center justify-center py-40 border-4 border-dashed border-slate-200 rounded-[3rem] bg-white/40 text-slate-400">
+            <div class="bg-white p-6 rounded-full shadow-sm mb-6">
+                <i data-lucide="upload-cloud" size="48" class="text-slate-200"></i>
+            </div>
+            <p class="text-2xl font-bold text-slate-500 mb-2">No hi ha cartes</p>
+            <p class="text-slate-400">Puja un fitxer CSV per començar a generar-les</p>
+        </div>
+
+        <!-- Grid -->
+        <div id="cardGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center">
+            <!-- Les cartes es generen aquí via JS -->
+        </div>
+    </div>
+
+    <script>
+        // Estat Global
+        let allCards = [];
+        let currentFilter = 'all';
+
+        // Inicialització d'icones
+        lucide.createIcons();
+
+        // Elements del DOM
+        const csvInput = document.getElementById('csvInput');
+        const cardGrid = document.getElementById('cardGrid');
+        const emptyState = document.getElementById('emptyState');
+        const printBtn = document.getElementById('printBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const filterSection = document.getElementById('filterSection');
+        const counter = document.getElementById('counter');
+        const deleteModal = document.getElementById('deleteModal');
+
+        // Escoltadors d'esdeveniments
+        csvInput.addEventListener('change', handleFileUpload);
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const text = event.target.result;
+                const newCards = parseCSV(text);
+                if (newCards.length > 0) {
+                    allCards = [...allCards, ...newCards];
+                    updateUI();
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // Reset input
+        }
+
+        function parseCSV(text) {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const parsed = [];
+
+            lines.forEach(line => {
+                if (line.replace(/,/g, '').length === 0) return;
+                
+                const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+                const typeLabel = cols[0].toLowerCase();
+
+                // Capçaleres
+                if (typeLabel.includes('tipus') || typeLabel.includes('tipo')) return;
+
+                if (typeLabel === 'class') {
+                    parsed.push({
+                        tipus: 'class',
+                        nom: cols[1],
+                        desc: cols[2],
+                        codi: cols[3],
+                        vida: parseInt(cols[6]?.match(/\d+/)) || 0,
+                        forca: parseInt(cols[7]?.match(/\d+/)) || 0,
+                        m1: cols[8],
+                        m2: cols[9],
+                        esp: cols[10]
+                    });
+                } else if (typeLabel === 'constructor' || typeLabel === 'method') {
+                    parsed.push({
+                        tipus: typeLabel,
+                        nom: cols[1],
+                        classRef: cols[2],
+                        desc: cols[3],
+                        codi: cols[4],
+                        ram: parseInt(cols[5]) || 0
+                    });
+                }
+            });
+            return parsed;
+        }
+
+        function updateUI() {
+            const hasCards = allCards.length > 0;
+            emptyState.style.display = hasCards ? 'none' : 'flex';
+            filterSection.classList.toggle('hidden', !hasCards);
+            printBtn.disabled = !hasCards;
+            clearBtn.disabled = !hasCards;
+            
+            renderCards();
+        }
+
+        function renderCards() {
+            cardGrid.innerHTML = '';
+            const filtered = currentFilter === 'all' 
+                ? allCards 
+                : allCards.filter(c => c.tipus === currentFilter);
+
+            counter.innerText = filtered.length;
+
+            filtered.forEach(data => {
+                const card = createCardElement(data);
+                cardGrid.appendChild(card);
+            });
+            
+            lucide.createIcons();
+        }
+
+        function createCardElement(data) {
+            const div = document.createElement('div');
+            const isClass = data.tipus === 'class';
+            const isConstructor = data.tipus === 'constructor';
+            const isMethod = data.tipus === 'method';
+
+            const themeClass = isClass ? 'card-class' : (isConstructor ? 'card-constructor' : 'card-method');
+            const headerClass = isClass ? 'header-class' : (isConstructor ? 'header-constructor' : 'header-method');
+            const iconName = isClass ? 'settings' : (isConstructor ? 'zap' : 'code');
+            const iconColor = isClass ? 'text-purple-400' : (isConstructor ? 'text-emerald-400' : 'text-orange-400');
+
+            div.className = `mtg-card rounded-xl border-8 p-1 shadow-2xl flex flex-col ${themeClass}`;
+            
+            div.innerHTML = `
+                <div class="flex justify-between items-center p-1 rounded-t px-2 mb-1 ${headerClass} border-b border-white/20">
+                    <span class="font-bold text-[11px] truncate uppercase tracking-tighter">${data.nom || 'Sense Nom'}</span>
+                    <div class="flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded-full border border-white/20">
+                        <span class="text-[10px] font-bold">${isClass ? 'CORE' : (data.ram || 0)}</span>
+                        <i data-lucide="cpu" size="10" class="text-blue-400"></i>
+                    </div>
+                </div>
+
+                <div class="w-full h-24 bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center border border-black overflow-hidden relative">
+                    <div class="absolute inset-0 opacity-10 flex flex-wrap gap-2 p-2">
+                        ${Array.from({length: 12}).map(() => `<div class="text-[6px] font-mono">0101</div>`).join('')}
+                    </div>
+                    <i data-lucide="${iconName}" size="40" class="${iconColor} z-10 opacity-80"></i>
+                </div>
+
+                <div class="mx-1 mt-1 px-2 py-0.5 border border-black italic text-[9px] ${headerClass} font-semibold">
+                    ${isClass ? "Class Definition — Object" : (isConstructor ? `Constructor — ${data.classRef}` : `Method — ${data.classRef}`)}
+                </div>
+
+                <div class="flex-grow mx-1 my-1 p-2 bg-slate-100 text-gray-900 rounded-sm border border-black text-[9px] leading-tight overflow-hidden">
+                    <p class="italic mb-1 text-gray-600 border-b border-gray-300 pb-1">${data.desc}</p>
+                    <div class="font-mono bg-gray-800 text-blue-300 p-1 rounded mt-1 border border-black break-words whitespace-pre-wrap">
+                        ${data.codi}
+                    </div>
+                    ${isClass ? `
+                        <div class="mt-2 space-y-0.5">
+                            <div class="flex items-center gap-1 font-bold"><i data-lucide="zap" size="8"></i> ${data.m1 || 'm1'}()</div>
+                            <div class="flex items-center gap-1 font-bold"><i data-lucide="shield" size="8"></i> ${data.m2 || 'm2'}()</div>
+                            <div class="flex items-center gap-1 font-bold"><i data-lucide="code" size="8"></i> ${data.esp || 'esp'}()</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${isClass ? `
+                    <div class="absolute bottom-2 right-2 bg-slate-200 border-2 border-slate-800 text-gray-900 px-2 py-0.5 rounded font-black flex items-center gap-2 text-[10px] shadow-md">
+                        <div class="flex items-center text-red-700"><i data-lucide="heart" size="10" class="mr-0.5"></i>${data.vida}</div>
+                        <div class="w-[1px] h-3 bg-gray-400"></div>
+                        <div class="flex items-center text-blue-800"><i data-lucide="zap" size="10" class="mr-0.5"></i>${data.forca}</div>
+                    </div>
+                ` : ''}
+                
+                <div class="text-[5px] text-center mb-0.5 opacity-50 uppercase tracking-widest">
+                    JAVA EDITION © 2024
+                </div>
+            `;
+            return div;
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filter) {
+                    btn.classList.add('bg-slate-800', 'text-white', 'shadow-md');
+                    btn.classList.remove('bg-slate-100', 'text-slate-500');
+                } else {
+                    btn.classList.remove('bg-slate-800', 'text-white', 'shadow-md');
+                    btn.classList.add('bg-slate-100', 'text-slate-500');
+                }
+            });
+            renderCards();
+        }
+
+        // Gestió del Modal
+        function openModal() { deleteModal.classList.remove('hidden'); }
+        function closeModal() { deleteModal.classList.add('hidden'); }
+        function confirmClear() {
+            allCards = [];
+            updateUI();
+        }
+
+        function handlePrint() {
+            window.focus();
+            setTimeout(() => {
+                window.print();
+            }, 200);
+        }
+    </script>
+</body>
+</html>

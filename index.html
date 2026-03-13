@@ -62,13 +62,18 @@
         .card-class { border-color: #4c1d95; color: #f5f3ff; }
         .card-constructor { border-color: #064e3b; color: #ecfdf5; }
         .card-method { border-color: #7c2d12; color: #fff7ed; }
+        .card-ram { border-color: #0891b2; color: #ecfeff; }
 
         .header-class { background-color: rgba(76, 29, 149, 0.6); }
         .header-constructor { background-color: rgba(6, 78, 59, 0.6); }
         .header-method { background-color: rgba(154, 52, 18, 0.6); }
+        .header-ram { background-color: rgba(8, 145, 178, 0.6); }
 
-        /* Art Icon Size */
-        .art-icon svg { width: 64px !important; height: 64px !important; }
+        /* Art Icon Size (Forçat a 64x64 via CSS) */
+        .art-icon svg { 
+            width: 64px !important; 
+            height: 64px !important; 
+        }
 
         /* Layout d'impressió */
         @media print {
@@ -96,7 +101,7 @@
                 display: flex !important;
             }
             
-            /* En el revers, invertim l'ordre de les columnes per alineació perfecta al girar horitzontalment */
+            /* Alineació per a gir horitzontal del paper */
             .print-page.back-page {
                 direction: rtl; 
             }
@@ -117,7 +122,7 @@
                 <i data-lucide="alert-triangle"></i>
             </div>
             <h3 class="text-2xl font-black text-slate-800 mb-2">Esborrar tot?</h3>
-            <p class="text-slate-600 mb-6">Es perdran totes les cartes actuals.</p>
+            <p class="text-slate-600 mb-6">Es perdran totes les cartes actuals del mazo.</p>
             <div class="flex gap-4">
                 <button onclick="closeModal()" class="flex-1 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition">Cancel·lar</button>
                 <button onclick="confirmClear()" class="flex-1 py-3 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition">Sí, esborra</button>
@@ -135,18 +140,22 @@
                     </div>
                     <div>
                         <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase">Java <span class="text-emerald-600 italic">Deck</span></h1>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Automatic 2-Side Printing System</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center lg:text-left">Sistema d'Impressió Automàtica a 2 Cares</p>
                     </div>
                 </div>
 
-                <div class="flex gap-3">
-                    <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-black cursor-pointer transition shadow-lg flex items-center gap-2 uppercase text-xs">
-                        <i data-lucide="plus-square" size="18"></i> Importar CSV
+                <div class="flex flex-wrap justify-center gap-3">
+                    <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-2xl font-black cursor-pointer transition shadow-lg flex items-center gap-2 uppercase text-[10px]">
+                        <i data-lucide="plus-square" size="16"></i> Importar CSV
                         <input type="file" id="csvInput" accept=".csv" class="hidden">
                     </label>
+
+                    <button onclick="generateRamCard()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-3 rounded-2xl font-black transition shadow-lg flex items-center gap-2 uppercase text-[10px]">
+                        <i data-lucide="database" size="16"></i> Generar RAM
+                    </button>
                     
-                    <button id="printBtn" onclick="handlePrint()" disabled class="bg-slate-900 hover:bg-black text-white px-8 py-3 rounded-2xl font-black transition shadow-lg flex items-center gap-2 uppercase text-xs">
-                        <i data-lucide="printer" size="18"></i> Imprimir a 2 Cares
+                    <button id="printBtn" onclick="handlePrint()" disabled class="bg-slate-900 hover:bg-black text-white px-8 py-3 rounded-2xl font-black transition shadow-lg flex items-center gap-2 uppercase text-[10px]">
+                        <i data-lucide="printer" size="16"></i> Imprimir a 2 Cares
                     </button>
 
                     <button id="clearBtn" onclick="openModal()" disabled class="p-3 text-red-400 hover:text-red-600 transition">
@@ -155,28 +164,25 @@
                 </div>
             </div>
 
-            <div id="filterSection" class="hidden flex items-center gap-3 mt-8 pt-6 border-t border-slate-100">
-                <button onclick="setFilter('all')" class="filter-btn px-5 py-2 rounded-xl text-xs font-black bg-slate-900 text-white shadow-md" data-filter="all">TOTES</button>
-                <button onclick="setFilter('class')" class="filter-btn px-5 py-2 rounded-xl text-xs font-black bg-slate-100 text-slate-500" data-filter="class">CLASSES</button>
-                <button onclick="setFilter('constructor')" class="filter-btn px-5 py-2 rounded-xl text-xs font-black bg-slate-100 text-slate-500" data-filter="constructor">CONSTRUCTORS</button>
-                <button onclick="setFilter('method')" class="filter-btn px-5 py-2 rounded-xl text-xs font-black bg-slate-100 text-slate-500" data-filter="method">MÈTODES</button>
-                <div class="ml-auto text-[11px] font-black text-emerald-600 uppercase tracking-tighter">Deck: <span id="counter">0</span> cartes</div>
+            <div id="filterSection" class="hidden flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-8 pt-6 border-t border-slate-100">
+                <button onclick="setFilter('all')" class="filter-btn px-4 py-2 rounded-xl text-[10px] font-black bg-slate-900 text-white shadow-md" data-filter="all">TOTES</button>
+                <button onclick="setFilter('class')" class="filter-btn px-4 py-2 rounded-xl text-[10px] font-black bg-slate-100 text-slate-500" data-filter="class">CLASSES</button>
+                <button onclick="setFilter('constructor')" class="filter-btn px-4 py-2 rounded-xl text-[10px] font-black bg-slate-100 text-slate-500" data-filter="constructor">CONSTRUCTORS</button>
+                <button onclick="setFilter('method')" class="filter-btn px-4 py-2 rounded-xl text-[10px] font-black bg-slate-100 text-slate-500" data-filter="method">MÈTODES</button>
+                <button onclick="setFilter('ram')" class="filter-btn px-4 py-2 rounded-xl text-[10px] font-black bg-slate-100 text-slate-500" data-filter="ram">RAM</button>
+                <div class="ml-auto text-[11px] font-black text-emerald-600 uppercase tracking-tighter hidden lg:block">Mazo: <span id="counter">0</span> cartes</div>
             </div>
         </header>
     </div>
 
-    <!-- Main Grid / Print Layout -->
+    <!-- Main Grid -->
     <div id="mainContainer" class="max-w-6xl mx-auto">
-        <!-- Estat buit -->
-        <div id="emptyState" class="flex flex-col items-center justify-center py-40 border-4 border-dashed border-slate-200 rounded-[3.5rem] bg-white/50 text-slate-300 no-print">
+        <div id="emptyState" class="flex flex-col items-center justify-center py-40 border-4 border-dashed border-slate-200 rounded-[3.5rem] bg-white/50 text-slate-300 no-print text-center">
             <i data-lucide="file-code" size="64" class="mb-4 opacity-10"></i>
-            <p class="text-2xl font-black uppercase tracking-tight opacity-40">Importa els CSV per començar</p>
+            <p class="text-2xl font-black uppercase tracking-tight opacity-40">Importa CSV o genera RAM per visualitzar el mazo</p>
         </div>
 
-        <!-- Grid per pantalla -->
         <div id="cardGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center no-print mb-20"></div>
-
-        <!-- Contenidor invisible per a impressió (generat dinàmicament) -->
         <div id="printArea" class="hidden print:block"></div>
     </div>
 
@@ -214,6 +220,16 @@
             return parsed;
         }
 
+        function generateRamCard() {
+            allCards.push({
+                tipus: 'ram',
+                nom: 'Mòdul RAM',
+                desc: 'Afegeix una unitat de memòria al sistema (RAM). Element fonamental per executar qualsevol Constructor o Mètode del mazo.',
+                codi: 'System.memory += 1;'
+            });
+            updateUI();
+        }
+
         function updateUI() {
             const hasCards = allCards.length > 0;
             document.getElementById('emptyState').style.display = hasCards ? 'none' : 'flex';
@@ -245,29 +261,60 @@
                     <div class="text-white/40 font-black text-[9px] tracking-[0.4em] uppercase border-t border-white/10 pt-6">Java Edition Deck</div>
                 `;
             } else {
-                const isClass = data.tipus === 'class';
-                const theme = isClass ? 'card-class' : (data.tipus === 'constructor' ? 'card-constructor' : 'card-method');
-                const header = isClass ? 'header-class' : (data.tipus === 'constructor' ? 'header-constructor' : 'header-method');
-                const icon = isClass ? 'settings' : (data.tipus === 'constructor' ? 'zap' : 'code');
+                const type = data.tipus;
+                const isClass = type === 'class';
+                const isRam = type === 'ram';
+                
+                let theme = 'card-method';
+                let header = 'header-method';
+                
+                // Icones restaurades segons la petició
+                let icon = 'code'; 
+                let iconColor = 'text-orange-400';
+                
+                if (isClass) { 
+                    theme = 'card-class'; 
+                    header = 'header-class'; 
+                    icon = 'settings'; 
+                    iconColor = 'text-purple-400';
+                }
+                else if (type === 'constructor') { 
+                    theme = 'card-constructor'; 
+                    header = 'header-constructor'; 
+                    icon = 'zap'; 
+                    iconColor = 'text-emerald-400';
+                }
+                else if (isRam) { 
+                    theme = 'card-ram'; 
+                    header = 'header-ram'; 
+                    icon = 'cpu'; // RAM usa l'icona del recurs mana
+                    iconColor = 'text-blue-400';
+                }
+
                 div.className = `mtg-card card-front rounded-xl border-8 p-1 flex flex-col ${theme}`;
                 div.innerHTML = `
                     <div class="flex justify-between items-center p-1 rounded-t px-2 mb-1 ${header} border-b border-white/20">
                         <span class="font-black text-[12px] truncate uppercase tracking-tighter">${data.nom}</span>
                         <div class="flex items-center gap-1.5 bg-black/50 px-2 py-1 rounded-full border border-white/20">
-                            <span class="text-[12px] font-black">${isClass ? 'CORE' : (data.ram || 0)}</span>
+                            <span class="text-[12px] font-black">${isClass || isRam ? 'CORE' : (data.ram || 0)}</span>
                             <i data-lucide="cpu" size="14" class="text-blue-400"></i>
                         </div>
                     </div>
                     <div class="w-full h-24 bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center border border-black relative shrink-0">
-                        <div class="art-icon z-10 opacity-70"><i data-lucide="${icon}"></i></div>
+                        <div class="absolute inset-0 opacity-10 flex flex-wrap gap-2 p-2">
+                            ${Array.from({length: 12}).map(() => `<div class="text-[6px] font-mono">0101</div>`).join('')}
+                        </div>
+                        <div class="art-icon z-10 opacity-70 flex items-center justify-center">
+                            <i data-lucide="${icon}" class="${iconColor}"></i>
+                        </div>
                     </div>
                     <div class="mx-1 mt-1 px-2 py-1 border border-black italic text-[11px] ${header} font-black uppercase tracking-tight">
-                        ${isClass ? "Class Definition — Object" : data.tipus + " — " + (data.classRef || "Global")}
+                        ${isClass ? "Class Definition — Object" : (isRam ? "System Memory — RAM" : type + " — " + (data.classRef || "Global"))}
                     </div>
                     <div class="flex-grow mx-1 my-1 p-2 bg-slate-100 text-slate-900 rounded-sm border border-black text-[10px] flex flex-col relative overflow-hidden">
-                        <p class="italic mb-2 text-slate-600 border-b pb-1 font-bold text-[9px] text-left">${data.desc}</p>
+                        <p class="italic mb-2 text-slate-600 border-b pb-1 font-bold text-[9px] text-left leading-tight">${data.desc}</p>
                         ${!isClass ? `<div class="text-left font-mono bg-slate-900 text-blue-300 p-2 rounded shadow-inner text-[10px] whitespace-pre-wrap overflow-hidden flex-grow border-l-4 border-l-blue-500">${data.codi}</div>` : `
-                            <div class="space-y-1.5 pt-1 text-left flex-grow overflow-hidden">
+                            <div class="space-y-2 pt-1 text-left flex-grow overflow-hidden">
                                 <div class="flex items-center gap-1.5 font-black text-slate-800 text-[7.5px] uppercase whitespace-nowrap"><i data-lucide="zap" size="12" class="text-emerald-700 shrink-0"></i><span class="">${data.m1}</span></div>
                                 <div class="flex items-center gap-1.5 font-black text-slate-800 text-[7.5px] uppercase whitespace-nowrap"><i data-lucide="shield" size="12" class="text-blue-700 shrink-0"></i><span class="">${data.m2}</span></div>
                                 <div class="flex items-center gap-1.5 font-black text-slate-800 text-[7.5px] uppercase whitespace-nowrap pr-10"><i data-lucide="code" size="12" class="text-orange-700 shrink-0"></i><span class="">${data.esp}</span></div>
@@ -275,7 +322,7 @@
                         `}
                     </div>
                     ${isClass ? `<div class="absolute bottom-1.5 right-1.5 bg-white border-2 border-slate-900 px-2 py-0.5 rounded-md font-black flex items-center gap-1 text-[10px] shadow-md z-20"><div class="flex items-center text-red-600"><i data-lucide="heart" size="12" class="mr-1"></i>${data.vida}</div><div class="w-[1px] h-2.5 bg-slate-300 mx-0.5"></div><div class="flex items-center text-blue-600"><i data-lucide="zap" size="12" class="mr-1"></i>${data.forca}</div></div>` : ''}
-                    <div class="text-[5px] text-center mb-0.5 opacity-40 uppercase tracking-[0.3em] font-black">OOP JAVA - CARDS GAME © 2026</div>
+                    <div class="text-[5px] text-center mb-0.5 opacity-40 uppercase tracking-[0.3em] font-black">JAVA EDITION © 2024</div>
                 `;
             }
             return div;
@@ -285,18 +332,12 @@
             const printArea = document.getElementById('printArea');
             printArea.innerHTML = '';
             const filtered = allCards.filter(c => currentFilter === 'all' || c.tipus === currentFilter);
-            
-            // Agrupem en pàgines de 9
             for (let i = 0; i < filtered.length; i += 9) {
                 const chunk = filtered.slice(i, i + 9);
-                
-                // Full d'Anversos
                 const frontPage = document.createElement('div');
                 frontPage.className = 'print-page';
                 chunk.forEach(data => frontPage.appendChild(createCardElement(data)));
                 printArea.appendChild(frontPage);
-
-                // Full de Reversos
                 const backPage = document.createElement('div');
                 backPage.className = 'print-page back-page';
                 chunk.forEach(() => backPage.appendChild(createCardElement(null, true)));
@@ -308,7 +349,7 @@
             currentFilter = f;
             document.querySelectorAll('.filter-btn').forEach(b => {
                 const active = b.dataset.filter === f;
-                b.className = `filter-btn px-5 py-2 rounded-xl text-xs font-black transition-all ${active ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`;
+                b.className = `filter-btn px-4 py-2 rounded-xl text-[10px] font-black transition-all ${active ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`;
             });
             renderView();
         }
@@ -316,10 +357,7 @@
         function handlePrint() {
             preparePrintArea();
             lucide.createIcons();
-            setTimeout(() => {
-                window.focus();
-                window.print();
-            }, 500);
+            setTimeout(() => { window.focus(); window.print(); }, 500);
         }
 
         function openModal() { document.getElementById('deleteModal').classList.remove('hidden'); }
